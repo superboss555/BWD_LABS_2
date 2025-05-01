@@ -81,6 +81,38 @@
         DELETE http://localhost:3000/events/2
         <токен> 
 
+    6) Проверка изменения токена:
+    
+        POST http://localhost:3000/auth/login
+        {
+            "email": "user@example.com",
+            "password": "password123"
+        }
+
+        получили токен: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiZW1haWwiOiJpdmFuQGV4YW1wbGUuY29tIiwiaWF0IjoxNzQ2MTEzMzU0LCJleHAiOjE3NDYxMTQyNTR9.svLjOJOkuZYKJu-jRp0QXE9xl3PnFtmOIyefOBP7m6k
+
+        получили refresh token: 7b0e89f1-7f23-4272-99d7-ced9bc860d05
+        
+        GET http://localhost:3000/auth/profile
+        <токен>
+
+        Обновляем токены:
+
+        POST http://localhost:3000/auth/refresh
+        {
+            "refreshToken": "токен"
+        }
+
+        обновленные токены:
+        
+        "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6NiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzQ2MTEzOTgyLCJleHAiOjE3NDYxMTQ4ODJ9.ghFsVblrcY5Oux_qW3fW2L3hJarfpDGa9XUb-QsGK34"
+        
+        "refreshToken": "90bead8b-ba59-494a-be17-80d49a14e159"
+
+        
+
+
+
 
     
 

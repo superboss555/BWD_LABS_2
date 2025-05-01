@@ -4,6 +4,15 @@ import passport from '../configs/passport.js';
 
 const authRouter = Router();
 
+// Middleware для логирования запросов на refresh токен
+const logRefreshRequest = (req, res, next) => {
+  console.log('Получен запрос на обновление токена:', {
+    headers: req.headers,
+    body: req.body
+  });
+  next();
+};
+
 /**
  * @swagger
  * /auth/register:
@@ -86,7 +95,9 @@ authRouter.post('/register', AuthController.register);
  *                 data:
  *                   type: object
  *                   properties:
- *                     token:
+ *                     accessToken:
+ *                       type: string
+ *                     refreshToken:
  *                       type: string
  *                     user:
  *                       type: object
@@ -94,6 +105,72 @@ authRouter.post('/register', AuthController.register);
  *         description: Неверные учетные данные
  */
 authRouter.post('/login', AuthController.login);
+
+/**
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Обновление access токена с использованием refresh токена
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *             required:
+ *               - refreshToken
+ *     responses:
+ *       200:
+ *         description: Токены успешно обновлены
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                     refreshToken:
+ *                       type: string
+ *                     user:
+ *                       type: object
+ *       401:
+ *         description: Недействительный или просроченный refresh токен
+ */
+authRouter.post('/refresh', logRefreshRequest, AuthController.refreshToken);
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Выход пользователя из системы (удаление refresh токена)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *             required:
+ *               - refreshToken
+ *     responses:
+ *       200:
+ *         description: Успешный выход из системы
+ *       400:
+ *         description: Refresh токен не предоставлен
+ */
+authRouter.post('/logout', AuthController.logout);
 
 /**
  * @swagger
