@@ -58,7 +58,7 @@ class EventController {
 
 	async delete(req, res, next) {
 		try {
-			await EventService.deleteEvent(req.params.id)
+			await EventService.deleteEvent(req.params.id, req.user.id)
 
 			res.status(200).json({
 				status: 'success',

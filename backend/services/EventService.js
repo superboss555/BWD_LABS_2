@@ -69,11 +69,15 @@ class EventService {
 		}
 	}
 
-	async deleteEvent(id) {
+	async deleteEvent(id, userId) {
 		try {
 			const event = await Event.findByPk(id)
 			if (!event) {
 				throw new Error(`Мероприятие с ID ${id} не найдено`)
+			}
+
+			if (event.createdBy !== userId) {
+				throw new Error('Нет прав на удаление этого мероприятия')
 			}
 
 			await event.destroy()
