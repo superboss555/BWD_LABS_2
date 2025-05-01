@@ -3,9 +3,11 @@ import 'dotenv/config'
 import cors from 'cors'
 import morgan from 'morgan'
 import { authDB, syncDB, seedDB, resetAndSeedDB } from './configs/db.js'
-import { eventRouter, userRouter, baseRouter } from './routes/routes.js'
+import { eventRouter, userRouter, baseRouter, authRouter, publicRouter } from './routes/routes.js'
 import { specs, swaggerUi } from './configs/swagger.js'
 import apiKeyAuth from './middlewares/apiKeyAuth.js'
+import passport from './configs/passport.js'
+import { isAuthenticated } from './middlewares/authMiddleware.js'
 
 const app = express()
 const port = process.env.APP_PORT
@@ -17,12 +19,21 @@ app.use(morgan('[:method] :url'))
 app.use(json())
 app.use(cors())
 
+// Инициализация Passport
+app.use(passport.initialize())
+
 // Документация API
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs))
 
+// Публичные маршруты (без аутентификации)
+app.use('/', publicRouter)
+
+// Маршруты для аутентификации (без проверки API-ключа)
+app.use('/auth', authRouter)
+
 // Проверка API-ключа для всех маршрутов, кроме базовых и документации
-app.use('/events', apiKeyAuth, eventRouter)
-app.use('/users', apiKeyAuth, userRouter)
+app.use('/events', apiKeyAuth, isAuthenticated, eventRouter)
+app.use('/users', apiKeyAuth, isAuthenticated, userRouter)
 app.use('/', baseRouter)
 
 // Флаг для пересоздания и заполнения базы данных при запуске

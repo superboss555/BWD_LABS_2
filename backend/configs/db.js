@@ -11,7 +11,7 @@ const sequelize = new Sequelize(db_name, db_user, db_password, {
 	host: db_host,
 	port: db_port,
 	dialect: 'postgres',
-	logging: console.log // Включаем логирование SQL запросов
+	logging: false // Включаем логирование SQL запросов
 })
 
 const authDB = async () => {
@@ -24,14 +24,48 @@ const authDB = async () => {
 	}
 }
 
+// Функция для сбрасывания лишних таблиц
+const cleanupDuplicateTables = async () => {
+	try {
+		console.debug('Проверяю наличие таблиц...')
+		
+		// Сначала удаляем таблицу event, которая зависит от user/users
+		console.debug('Удаляю таблицу events (если существует)...')
+		await sequelize.query('DROP TABLE IF EXISTS events CASCADE')
+		
+		console.debug('Удаляю таблицу event (если существует)...')
+		await sequelize.query('DROP TABLE IF EXISTS event CASCADE')
+		
+		// Затем удаляем таблицы users и user
+		console.debug('Удаляю таблицу users (если существует)...')
+		await sequelize.query('DROP TABLE IF EXISTS users CASCADE')
+		
+		console.debug('Удаляю таблицу user (если существует)...')
+		await sequelize.query('DROP TABLE IF EXISTS "user" CASCADE')
+		
+		console.debug('Таблицы успешно удалены')
+	} catch (error) {
+		console.error(`Ошибка при удалении таблиц: ${error}`)
+		throw error
+	}
+}
+
 // Параметр force указывает, нужно ли пересоздавать таблицы
 const syncDB = async (force = false) => {
 	try {
-		await sequelize.sync({ force })
-		console.debug(`Таблицы синхронизированы! ${force ? '(с пересозданием)' : ''}`)
+		// Сначала проверяем и удаляем дублирующие таблицы
+		await cleanupDuplicateTables();
+		
+		// Загружаем модели перед синхронизацией
+		await import('../models/index.js');
+		
+		// Затем синхронизируем модели с базой данных
+		await sequelize.sync({ force });
+		console.debug(`Таблицы синхронизированы! ${force ? '(с пересозданием)' : ''}`);
+		
 	} catch (error) {
-		console.debug(`Таблицы не синхронизированы. Ошибка: ${error}`)
-		throw error // Пробросим ошибку дальше
+		console.debug(`Таблицы не синхронизированы. Ошибка: ${error}`);
+		throw error; // Пробросим ошибку дальше
 	}
 }
 
@@ -55,13 +89,21 @@ const seedDB = async () => {
 		
 		// Создаем тестовых пользователей
 		console.debug('Создаем пользователей...')
-		const users = await User.bulkCreate([
-			{ name: 'Иван Иванов', email: 'ivan@example.com' },
-			{ name: 'Мария Петрова', email: 'maria@example.com' },
-			{ name: 'Алексей Сидоров', email: 'alex@example.com' },
-			{ name: 'Екатерина Смирнова', email: 'kate@example.com' },
-			{ name: 'Дмитрий Козлов', email: 'dmitry@example.com' }
-		])
+		// Вместо bulkCreate используем индивидуальное создание каждого пользователя
+		// чтобы сработали хуки для хэширования пароля
+		const userList = [
+			{ name: 'Иван Иванов', email: 'ivan@example.com', password: 'password123' },
+			{ name: 'Мария Петрова', email: 'maria@example.com', password: 'password123' },
+			{ name: 'Алексей Сидоров', email: 'alex@example.com', password: 'password123' },
+			{ name: 'Екатерина Смирнова', email: 'kate@example.com', password: 'password123' },
+			{ name: 'Дмитрий Козлов', email: 'dmitry@example.com', password: 'password123' }
+		];
+		
+		const users = [];
+		for (const userData of userList) {
+			const user = await User.create(userData);
+			users.push(user);
+		}
 		
 		console.debug(`Создано ${users.length} пользователей`)
 		
@@ -74,73 +116,73 @@ const seedDB = async () => {
 			{
 				title: 'Конференция по веб-разработке',
 				description: 'Ежегодная конференция по современным веб-технологиям',
-				date: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), // через неделю
+				date: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), 
 				createdBy: users[0].id
 			},
 			{
 				title: 'Мастер-класс по JavaScript',
 				description: 'Практический мастер-класс по продвинутому JavaScript',
-				date: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), // через 3 дня
+				date: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000), 
 				createdBy: users[1].id
 			},
 			{
 				title: 'Хакатон по разработке мобильных приложений',
 				description: 'Трехдневный хакатон для разработчиков мобильных приложений',
-				date: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000), // через 2 недели
+				date: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000), 
 				createdBy: users[2].id
 			},
 			{
 				title: 'Вебинар: Основы React',
 				description: 'Вводный вебинар по библиотеке React',
-				date: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000), // через 5 дней
+				date: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000), 
 				createdBy: users[0].id
 			},
 			{
 				title: 'Встреча группы разработчиков Node.js',
 				description: 'Ежемесячная встреча сообщества Node.js разработчиков',
-				date: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000), // через 10 дней
+				date: new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000), 
 				createdBy: users[3].id
 			},
 			{
 				title: 'Семинар по базам данных',
 				description: 'Углубленный семинар по оптимизации баз данных',
-				date: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000), // через 6 дней
+				date: new Date(now.getTime() + 6 * 24 * 60 * 60 * 1000), 
 				createdBy: users[2].id
 			},
 			{
 				title: 'Мастер-класс по Docker',
 				description: 'Практическое введение в Docker и контейнеризацию',
-				date: new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000), // через 12 дней
+				date: new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000), 
 				createdBy: users[4].id
 			},
 			{
 				title: 'Лекция по кибербезопасности',
 				description: 'Современные угрозы и методы защиты веб-приложений',
-				date: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000), // через 4 дня
+				date: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000), 
 				createdBy: users[1].id
 			},
 			{
 				title: 'Воркшоп по дизайну интерфейсов',
 				description: 'Практические приемы создания удобных пользовательских интерфейсов',
-				date: new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000), // через 9 дней
+				date: new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000), 
 				createdBy: users[3].id
 			},
 			{
 				title: 'Конференция по искусственному интеллекту',
 				description: 'Последние достижения в области ИИ и машинного обучения',
-				date: new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000), // через 3 недели
+				date: new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000), 
 				createdBy: users[4].id
 			},
 			{
 				title: 'Митап по TypeScript',
 				description: 'Обмен опытом и лучшими практиками при работе с TypeScript',
-				date: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000), // через 15 дней
+				date: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000), 
 				createdBy: users[2].id
 			},
 			{
 				title: 'Курс по GraphQL',
 				description: 'Введение в GraphQL и его использование с React и Node.js',
-				date: new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000), // через 8 дней
+				date: new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000), 
 				createdBy: users[0].id
 			}
 		])
@@ -151,7 +193,7 @@ const seedDB = async () => {
 		return { users, events }
 	} catch (error) {
 		console.error(`Ошибка при заполнении базы данных: ${error}`)
-		throw error // Пробросим ошибку дальше
+		throw error 
 	}
 }
 
