@@ -1,9 +1,21 @@
 import { Event } from '../models/index.js'
 
 class EventService {
-	async getAllEvents() {
+	async getAllEvents(page = 1, limit = 10) {
 		try {
-			return await Event.findAll()
+			const offset = (page - 1) * limit;
+			
+			const { count, rows } = await Event.findAndCountAll({
+				limit: parseInt(limit),
+				offset: offset
+			});
+			
+			return {
+				events: rows,
+				totalCount: count,
+				totalPages: Math.ceil(count / limit),
+				currentPage: parseInt(page)
+			};
 		} catch (error) {
 			throw error
 		}

@@ -3,7 +3,8 @@ import EventService from '../services/EventService.js'
 class EventController {
 	async getAll(req, res, next) {
 		try {
-			const events = await EventService.getAllEvents()
+			const { page = 1, limit = 10 } = req.query;
+			const events = await EventService.getAllEvents(page, limit);
 
 			res.status(200).json({
 				status: 'success',
