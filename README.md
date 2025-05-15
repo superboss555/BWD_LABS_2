@@ -123,7 +123,9 @@
         npm run format
         npm run check
 
+    2) команда для проверки хаски:
 
+    npm run test-husky
 
 
     
