@@ -2,42 +2,35 @@ import express, { json } from 'express';
 import 'dotenv/config';
 import cors from 'cors';
 import morgan from 'morgan';
-import { authDB, syncDB, seedDB, resetAndSeedDB } from './configs/db.js';
+import { authDB, syncDB, seedDB, resetAndSeedDB } from '@configs/db.js';
 import {
   eventRouter,
   userRouter,
   baseRouter,
   authRouter,
   publicRouter,
-} from './routes/routes.js';
-import { specs, swaggerUi } from './configs/swagger.js';
-import apiKeyAuth from './middlewares/apiKeyAuth.js';
-import passport from './configs/passport.js';
-import { isAuthenticated } from './middlewares/authMiddleware.js';
+} from '@routes/routes.js';
+import { specs, swaggerUi } from '@configs/swagger.js';
+import apiKeyAuth from '@middlewares/apiKeyAuth.js';
+import passport from '@configs/passport.js';
+import { isAuthenticated } from '@middlewares/authMiddleware.js';
 
 const app = express();
 const port = process.env.APP_PORT || 3000;
 
-// Логирование запросов
 app.use(morgan('[:method] :url'));
 
-// Парсинг JSON-запросов
 app.use(json());
 app.use(cors());
 
-// Инициализация Passport.js
 app.use(passport.initialize());
 
-// Документация Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
-// Публичные маршруты
 app.use('/', publicRouter);
 
-// Маршруты аутентификации
 app.use('/auth', authRouter);
 
-// Защищенные маршруты
 app.use(
   '/events',
   apiKeyAuth as express.RequestHandler,
@@ -52,12 +45,18 @@ app.use(
 );
 app.use('/', baseRouter);
 
-// Флаг для сброса базы данных
 const RESET_DATABASE = process.env.RESET_DATABASE === 'true' || false;
 
 async function startServer(): Promise<void> {
   try {
+    console.log('Запуск сервера...');
+    console.log('Подключение к базе данных PostgreSQL...');
+    console.log(
+      `Используются параметры: ${process.env.DB_HOST}:${process.env.DB_PORT}, ${process.env.DB_NAME}`,
+    );
+
     await authDB();
+    console.log('База данных подключена успешно!');
 
     if (RESET_DATABASE) {
       console.debug(
@@ -79,3 +78,4 @@ async function startServer(): Promise<void> {
 }
 
 startServer();
+  //husky

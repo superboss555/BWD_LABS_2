@@ -28,14 +28,12 @@ export const cleanupDuplicateTables = async (): Promise<void> => {
   try {
     console.debug('Проверяю наличие таблиц...');
 
-    // Сначала удаляем таблицу event, которая зависит от user/users
     console.debug('Удаляю таблицу events (если существует)...');
     await sequelize.query('DROP TABLE IF EXISTS events CASCADE');
 
     console.debug('Удаляю таблицу event (если существует)...');
     await sequelize.query('DROP TABLE IF EXISTS event CASCADE');
 
-    // Затем удаляем таблицы users и user
     console.debug('Удаляю таблицу users (если существует)...');
     await sequelize.query('DROP TABLE IF EXISTS users CASCADE');
 
@@ -49,17 +47,15 @@ export const cleanupDuplicateTables = async (): Promise<void> => {
   }
 };
 
-export const syncDB = async (force = false): Promise<void> => {
+export const syncDB = async (shouldForce = false): Promise<void> => {
   try {
     await cleanupDuplicateTables();
 
-    // Импортируем модели
     await import('../models/index.js');
 
-    // Синхронизируем модели с базой данных
-    await sequelize.sync({ force });
+    await sequelize.sync({ force: shouldForce });
     console.debug(
-      `Таблицы синхронизированы! ${force ? '(с пересозданием)' : ''}`,
+      `Таблицы синхронизированы! ${shouldForce ? '(с пересозданием)' : ''}`,
     );
   } catch (error) {
     console.debug(`Таблицы не синхронизированы. Ошибка: ${error}`);
@@ -74,10 +70,8 @@ export const seedDB = async (): Promise<{
   try {
     console.debug('Начинаем заполнение базы данных...');
 
-    // Импортируем модели
     const { User, Event } = await import('../models/index.js');
 
-    // Проверяем, есть ли данные в базе
     const userCount = await User.count();
     const eventCount = await Event.count();
 
@@ -90,7 +84,6 @@ export const seedDB = async (): Promise<{
       return;
     }
 
-    // Создаем пользователей
     console.debug('Создаем пользователей...');
 
     const userList = [
@@ -129,10 +122,8 @@ export const seedDB = async (): Promise<{
 
     console.debug(`Создано ${users.length} пользователей`);
 
-    // Текущая дата для создания мероприятий
     const now = new Date();
 
-    // Создаем мероприятия
     console.debug('Создаем мероприятия...');
     const events = await Event.bulkCreate([
       {
@@ -222,7 +213,6 @@ export const seedDB = async (): Promise<{
   }
 };
 
-// Функция для очистки и пересоздания базы с тестовыми данными
 export const resetAndSeedDB = async (): Promise<void> => {
   try {
     await syncDB(true);
