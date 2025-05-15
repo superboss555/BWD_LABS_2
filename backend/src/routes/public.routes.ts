@@ -1,7 +1,7 @@
-import { Router } from 'express'
-import EventController from '../controllers/EventController.js'
+import { Router } from 'express';
+import EventController from '../controllers/EventController.js';
 
-const publicRouter = Router()
+const publicRouter = Router();
 
 /**
  * @swagger
@@ -45,6 +45,6 @@ const publicRouter = Router()
  *                     currentPage:
  *                       type: integer
  */
-publicRouter.get('/events', EventController.getAll)
+publicRouter.get('/events', EventController.getAll);
 
-export default publicRouter 
+export default publicRouter;

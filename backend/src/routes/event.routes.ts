@@ -1,7 +1,7 @@
-import { Router } from 'express'
-import EventController from '../controllers/EventController.js'
+import { Router } from 'express';
+import EventController from '../controllers/EventController.js';
 
-const eventRouter = Router()
+const eventRouter = Router();
 
 /**
  * @swagger
@@ -21,7 +21,7 @@ const eventRouter = Router()
  *       404:
  *         description: Мероприятие не найдено
  */
-eventRouter.get('/:id', EventController.getOne)
+eventRouter.get('/:id', EventController.getOne);
 
 /**
  * @swagger
@@ -40,7 +40,7 @@ eventRouter.get('/:id', EventController.getOne)
  *       400:
  *         description: Неверные данные
  */
-eventRouter.post('/', EventController.create)
+eventRouter.post('/', EventController.create);
 
 /**
  * @swagger
@@ -65,7 +65,7 @@ eventRouter.post('/', EventController.create)
  *       404:
  *         description: Мероприятие не найдено
  */
-eventRouter.put('/:id', EventController.update)
+eventRouter.put('/:id', EventController.update);
 
 /**
  * @swagger
@@ -84,6 +84,6 @@ eventRouter.put('/:id', EventController.update)
  *       404:
  *         description: Мероприятие не найдено
  */
-eventRouter.delete('/:id', EventController.delete)
+eventRouter.delete('/:id', EventController.delete);
 
-export default eventRouter 
+export default eventRouter;

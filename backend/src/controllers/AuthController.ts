@@ -1,14 +1,26 @@
+import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { User, RefreshToken } from '../models/index.js';
-import bcrypt from 'bcrypt';
 import { v4 as uuidv4 } from 'uuid';
+import { UserInstance, RefreshTokenInstance } from '../types/models.js';
+import { AuthRequest } from '../types/express.js';
 
 // Использовать значение из .env или использовать запасной ключ
-const JWT_SECRET = process.env.JWT_SECRET || "test_jwt_secret_key";
-const REFRESH_SECRET = process.env.REFRESH_SECRET || "test_refresh_secret_key";
+const JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_key';
 // Время жизни токенов
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 минут
-const REFRESH_TOKEN_EXPIRY = '7d'; // 7 дней
+
+interface TokenPayload {
+  id: number;
+  email: string;
+  name: string;
+}
+
+interface TokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  refreshTokenExpiry: Date;
+}
 
 class AuthController {
   constructor() {
@@ -22,35 +34,41 @@ class AuthController {
   }
 
   // Метод для регистрации пользователя
-  async register(req, res, next) {
+  async register(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { email, name, password } = req.body;
-      
+
       // Проверка наличия обязательных полей
       if (!email || !name || !password) {
-        return res.status(400).json({
+        res.status(400).json({
           status: 'error',
           message: 'Email, имя и пароль обязательны',
         });
+        return;
       }
-      
+
       // Проверка существования пользователя с таким email
       const existingUser = await User.findOne({ where: { email } });
-      
+
       if (existingUser) {
-        return res.status(400).json({
+        res.status(400).json({
           status: 'error',
           message: 'Пользователь с таким email уже существует',
         });
+        return;
       }
-      
+
       // Создание нового пользователя (пароль будет хеширован через beforeCreate хук)
-      const newUser = await User.create({
+      const newUser = (await User.create({
         email,
         name,
         password, // Хеширование произойдет автоматически в хуке
-      });
-      
+      })) as UserInstance;
+
       res.status(201).json({
         status: 'success',
         message: 'Пользователь успешно зарегистрирован',
@@ -58,8 +76,8 @@ class AuthController {
           user: {
             id: newUser.id,
             name: newUser.name,
-            email: newUser.email
-          }
+            email: newUser.email,
+          },
         },
       });
     } catch (error) {
@@ -69,50 +87,59 @@ class AuthController {
   }
 
   // Метод для аутентификации пользователя и выдачи JWT и Refresh токенов
-  async login(req, res, next) {
+  async login(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { email, password } = req.body;
-      
+
       console.log(`Попытка входа с email: ${email}`);
-      
+
       if (!email || !password) {
         console.log('Отсутствует email или пароль');
-        return res.status(400).json({
+        res.status(400).json({
           status: 'error',
           message: 'Email и пароль обязательны',
         });
+        return;
       }
-      
+
       // Поиск пользователя по email
-      const user = await User.findOne({ where: { email } });
-      
+      const user = (await User.findOne({
+        where: { email },
+      })) as UserInstance | null;
+
       if (!user) {
         console.log(`Пользователь с email ${email} не найден`);
-        return res.status(401).json({
+        res.status(401).json({
           status: 'error',
           message: 'Неверный email или пароль',
         });
+        return;
       }
-      
+
       console.log(`Пользователь найден: ID=${user.id}, Name=${user.name}`);
-      
+
       // Проверка пароля используя метод модели User
       const isPasswordValid = await user.comparePassword(password);
-      
-      console.log(`Результат проверки пароля: ${isPasswordValid ? 'верный' : 'неверный'}`);
-      
+
+      console.log(
+        `Результат проверки пароля: ${isPasswordValid ? 'верный' : 'неверный'}`,
+      );
+
       if (!isPasswordValid) {
-        return res.status(401).json({
+        res.status(401).json({
           status: 'error',
           message: 'Неверный email или пароль',
         });
+        return;
       }
-      
+
       // Создание токенов с явным указанием на this
-      const { accessToken, refreshToken, refreshTokenExpiry } = await this.generateTokens(user);
-      
-      console.log(`Токены созданы. Access token действителен до: ${new Date(Date.now() + 15 * 60 * 1000)}`);
-      
+      const { accessToken, refreshToken } = await this.generateTokens(user);
+
+      console.log(
+        `Токены созданы. Access token действителен до: ${new Date(Date.now() + 15 * 60 * 1000)}`,
+      );
+
       res.status(200).json({
         status: 'success',
         message: 'Аутентификация успешна',
@@ -122,8 +149,8 @@ class AuthController {
           user: {
             id: user.id,
             name: user.name,
-            email: user.email
-          }
+            email: user.email,
+          },
         },
       });
     } catch (error) {
@@ -131,74 +158,86 @@ class AuthController {
       next(error);
     }
   }
-  
+
   // Метод для обновления access токена с помощью refresh токена
-  async refreshToken(req, res, next) {
+  async refreshToken(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const { refreshToken } = req.body;
-      
+
       console.log(`Попытка обновления токена: ${refreshToken}`);
-      
+
       if (!refreshToken) {
         console.log('Refresh токен отсутствует в запросе');
-        return res.status(400).json({
+        res.status(400).json({
           status: 'error',
           message: 'Refresh токен обязателен',
         });
+        return;
       }
-      
+
       // Проверяем refresh токен в базе данных
-      const tokenRecord = await RefreshToken.findOne({ 
-        where: { token: refreshToken }
-      });
-      
-      console.log('Результат поиска токена:', tokenRecord ? 'Найден' : 'Не найден');
-      
+      const tokenRecord = (await RefreshToken.findOne({
+        where: { token: refreshToken },
+      })) as RefreshTokenInstance | null;
+
+      console.log(
+        'Результат поиска токена:',
+        tokenRecord ? 'Найден' : 'Не найден',
+      );
+
       if (!tokenRecord) {
-        return res.status(401).json({
+        res.status(401).json({
           status: 'error',
           message: 'Недействительный refresh токен',
         });
+        return;
       }
-      
+
       // Проверяем срок действия
       if (new Date() > new Date(tokenRecord.expiresAt)) {
         console.log('Токен истек:', tokenRecord.expiresAt);
         // Удаляем просроченный токен
-        await tokenRecord.destroy();
-        
-        return res.status(401).json({
+        await RefreshToken.destroy({ where: { token: tokenRecord.token } });
+
+        res.status(401).json({
           status: 'error',
           message: 'Refresh токен истек',
         });
+        return;
       }
-      
+
       // Получаем пользователя по ID из токена
-      const user = await User.findByPk(tokenRecord.userId);
-      
+      const user = (await User.findByPk(
+        tokenRecord.userId,
+      )) as UserInstance | null;
+
       if (!user) {
         console.log(`Пользователь с ID ${tokenRecord.userId} не найден`);
-        await tokenRecord.destroy();
-        return res.status(401).json({
+        await RefreshToken.destroy({ where: { token: tokenRecord.token } });
+        res.status(401).json({
           status: 'error',
           message: 'Пользователь не найден',
         });
+        return;
       }
-      
+
       console.log(`Пользователь найден: ID=${user.id}, Name=${user.name}`);
-      
+
       // Удаляем старый refresh токен
-      await tokenRecord.destroy();
-      
+      await RefreshToken.destroy({ where: { token: tokenRecord.token } });
+
       // Создаем новые токены
-      const { accessToken, refreshToken: newRefreshToken, refreshTokenExpiry } = 
+      const { accessToken, refreshToken: newRefreshToken } =
         await this.generateTokens(user);
-      
+
       console.log('Новые токены созданы:', {
         newRefreshToken: newRefreshToken.slice(0, 10) + '...',
-        expiresAt: refreshTokenExpiry
       });
-      
+
       res.status(200).json({
         status: 'success',
         message: 'Токены успешно обновлены',
@@ -208,8 +247,8 @@ class AuthController {
           user: {
             id: user.id,
             name: user.name,
-            email: user.email
-          }
+            email: user.email,
+          },
         },
       });
     } catch (error) {
@@ -217,91 +256,89 @@ class AuthController {
       next(error);
     }
   }
-  
-  // Метод для выхода пользователя (удаление refresh токена)
-  async logout(req, res, next) {
+
+  // Метод для выхода пользователя из системы (удаление refresh токена)
+  async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { refreshToken } = req.body;
-      
+
       if (!refreshToken) {
-        return res.status(400).json({
+        res.status(400).json({
           status: 'error',
           message: 'Refresh токен обязателен',
         });
+        return;
       }
-      
-      // Удаляем refresh токен из БД
-      await RefreshToken.destroy({ where: { token: refreshToken } });
-      
+
+      // Находим и удаляем refresh токен
+      const tokenRecord = await RefreshToken.findOne({
+        where: { token: refreshToken },
+      });
+
+      if (tokenRecord) {
+        await RefreshToken.destroy({ where: { token: refreshToken } });
+      }
+
       res.status(200).json({
         status: 'success',
-        message: 'Успешный выход из системы',
+        message: 'Выход выполнен успешно',
       });
     } catch (error) {
       console.error('Error in logout:', error);
       next(error);
     }
   }
-  
-  // Вспомогательный метод для генерации токенов
-  async generateTokens(user) {
-    console.log(`Генерация токенов для пользователя: ID=${user.id}, Name=${user.name}`);
-    
-    // Создание access токена
-    const accessToken = jwt.sign(
-      { 
+
+  // Метод для генерации новых токенов
+  async generateTokens(user: UserInstance): Promise<TokenResponse> {
+    try {
+      // Создаем данные для access токена
+      const payload: TokenPayload = {
         id: user.id,
-        email: user.email 
-      },
-      JWT_SECRET,
-      { expiresIn: ACCESS_TOKEN_EXPIRY }
-    );
-    
-    // Создание refresh токена
-    const refreshToken = uuidv4();
-    
-    // Вычисляем expiry date для refresh токена
-    const refreshTokenExpiry = new Date();
-    refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 7); // 7 дней
-    
-    console.log('Сохранение refresh токена в БД:', {
-      userId: user.id,
-      token: refreshToken.slice(0, 10) + '...',
-      expiresAt: refreshTokenExpiry
-    });
-    
-    // Удаляем старые refresh токены пользователя
-    await RefreshToken.destroy({
-      where: { userId: user.id }
-    });
-    
-    // Сохраняем refresh токен в БД
-    await RefreshToken.create({
-      userId: user.id,
-      token: refreshToken,
-      expiresAt: refreshTokenExpiry
-    });
-    
-    return { accessToken, refreshToken, refreshTokenExpiry };
+        email: user.email,
+        name: user.name,
+      };
+
+      // Генерируем access токен
+      const accessToken = jwt.sign(payload, JWT_SECRET, {
+        expiresIn: ACCESS_TOKEN_EXPIRY,
+      });
+
+      // Генерируем refresh токен (uuid)
+      const refreshToken = uuidv4();
+
+      // Устанавливаем срок действия refresh токена
+      const refreshTokenExpiry = new Date();
+      refreshTokenExpiry.setDate(refreshTokenExpiry.getDate() + 7); // 7 дней
+
+      // Удаляем старые refresh токены пользователя (опционально)
+      await RefreshToken.destroy({ where: { userId: user.id } });
+
+      // Сохраняем refresh токен в базу данных
+      await RefreshToken.create({
+        userId: user.id,
+        token: refreshToken,
+        expiresAt: refreshTokenExpiry,
+      });
+
+      return { accessToken, refreshToken, refreshTokenExpiry };
+    } catch (error) {
+      console.error('Error in generateTokens:', error);
+      throw error;
+    }
   }
-  
-  // Защищенный метод для проверки работы JWT аутентификации
-  async getProfile(req, res) {
-    // Если мы здесь, значит JWT прошел валидацию и пользователь аутентифицирован
-    const user = req.user;
-    
+
+  // Метод для получения профиля пользователя
+  async getProfile(req: Request, res: Response): Promise<void> {
+    const authReq = req as AuthRequest;
     res.status(200).json({
       status: 'success',
-      message: 'Пользователь аутентифицирован',
+      message: 'Профиль пользователя',
       data: {
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email
-        }
+        user: authReq.user,
       },
     });
   }
 }
 
-export default new AuthController(); 
+export default new AuthController();

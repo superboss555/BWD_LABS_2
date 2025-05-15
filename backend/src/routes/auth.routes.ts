@@ -1,14 +1,18 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import AuthController from '../controllers/AuthController.js';
 import passport from '../configs/passport.js';
 
 const authRouter = Router();
 
 // Middleware для логирования запросов на refresh токен
-const logRefreshRequest = (req, res, next) => {
+const logRefreshRequest = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
   console.log('Получен запрос на обновление токена:', {
     headers: req.headers,
-    body: req.body
+    body: req.body,
   });
   next();
 };
@@ -185,7 +189,11 @@ authRouter.post('/logout', AuthController.logout);
  *       401:
  *         description: Необходима авторизация
  */
-authRouter.get('/profile', passport.authenticate('jwt', { session: false }), AuthController.getProfile);
+authRouter.get(
+  '/profile',
+  passport.authenticate('jwt', { session: false }),
+  AuthController.getProfile,
+);
 
 /**
  * @swagger
@@ -198,22 +206,20 @@ authRouter.get('/profile', passport.authenticate('jwt', { session: false }), Aut
  *       200:
  *         description: JWT валиден
  *       401:
- *         description: Необходима авторизация
+ *         description: Необходима авторизация или недействительный JWT
  */
-authRouter.get('/test', 
+authRouter.get(
+  '/test',
   passport.authenticate('jwt', { session: false }),
-  (req, res) => {
-    console.log('Успешная аутентификация пользователя:', req.user.id);
-    res.json({ 
+  (req: Request, res: Response) => {
+    res.json({
       status: 'success',
-      message: 'JWT действителен',
-      user: {
-        id: req.user.id,
-        name: req.user.name,
-        email: req.user.email
-      }
+      message: 'JWT валиден',
+      data: {
+        user: req.user,
+      },
     });
-  }
+  },
 );
 
-export default authRouter; 
+export default authRouter;

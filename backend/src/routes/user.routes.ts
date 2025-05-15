@@ -1,7 +1,7 @@
-import { Router } from 'express'
-import UserController from '../controllers/UserController.js'
+import { Router } from 'express';
+import UserController from '../controllers/UserController.js';
 
-const userRouter = Router()
+const userRouter = Router();
 
 /**
  * @swagger
@@ -21,7 +21,7 @@ const userRouter = Router()
  *                   items:
  *                     $ref: '#/components/schemas/User'
  */
-userRouter.get('/', UserController.getAll)
+userRouter.get('/', UserController.getAll);
 
 /**
  * @swagger
@@ -40,6 +40,6 @@ userRouter.get('/', UserController.getAll)
  *       400:
  *         description: Неверные данные или пользователь уже существует
  */
-userRouter.post('/', UserController.create)
+userRouter.post('/', UserController.create);
 
-export default userRouter 
+export default userRouter;
