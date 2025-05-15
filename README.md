@@ -109,9 +109,23 @@
         
         "refreshToken": "90bead8b-ba59-494a-be17-80d49a14e159"
 
+
+
+
+
         
+Лаба 3
 
+    1) команды для проверки:
 
+        npm run tsc
+        npm run lint
+        npm run format
+        npm run check
+
+    2) команда для проверки хаски:
+
+    npm run test-husky
 
 
     
