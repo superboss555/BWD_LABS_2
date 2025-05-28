@@ -1,0 +1,27 @@
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Медиазапросы для мобильных устройств */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+  
+  h1 {
+    font-size: 2.4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 10px;
+  }
+  
+  h1 {
+    font-size: 1.8rem;
+  }
+} 
