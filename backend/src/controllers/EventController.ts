@@ -19,6 +19,30 @@ class EventController {
     }
   }
 
+  async getUserEvents(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthRequest;
+      const userId = authReq.user?.id;
+
+      if (!userId) {
+        res.status(401).json({
+          status: 'error',
+          message: 'Необходима авторизация',
+        });
+        return;
+      }
+
+      const events = await EventService.getUserEvents(userId);
+
+      res.status(200).json({
+        status: 'success',
+        data: events,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getOne(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
@@ -69,37 +93,37 @@ class EventController {
     }
   }
 
-  async update(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async update(req: Request & { user?: any }, res: Response): Promise<void> {
+    console.log('EventController.update called');
+    const userId = req.user?.id;
+    console.log('req.user:', req.user);
+    console.log('userId:', userId);
+  
+    if (!userId) {
+      console.log('User ID missing in request');
+      res.status(401).json({ status: 'error', message: 'Пользователь не найден' });
+      return;
+    }
+  
     try {
-      const { id } = req.params;
-      const authReq = req as AuthRequest;
-      const userId = authReq.user?.id;
-
-      if (!userId) {
-        res.status(401).json({
-          status: 'error',
-          message: 'Необходима авторизация',
-        });
-        return;
-      }
-
-      const result = await EventService.updateEvent(parseInt(id), req.body);
-
-      res.status(200).json({
-        status: 'success',
-        data: result,
-      });
+      console.log(`Update event request: eventId=${req.params.id}, userId=${userId}`);
+      console.log('Request body:', req.body);
+  
+      const updatedEvent = await EventService.updateEvent(Number(req.params.id), req.body, userId);
+  
+      console.log('Event updated successfully:', updatedEvent);
+  
+      res.json({ status: 'success', data: updatedEvent });
     } catch (error) {
-      if (error instanceof Error && error.message.includes('не найдено')) {
-        res.status(404).json({
-          status: 'error',
-          message: error.message,
-        });
-      } else {
-        next(error);
-      }
+      console.error('Error updating event:', error);
+      let message = 'Неизвестная ошибка';
+      if (error instanceof Error) message = error.message;
+      res.status(400).json({ status: 'error', message });
+      console.log('Response sent to client');
     }
   }
+  
+  
 
   async delete(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {

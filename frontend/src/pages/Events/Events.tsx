@@ -1,10 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getAllEvents, createEvent, deleteEvent, updateEvent } from '../../api/eventService';
-import { getFromStorage, STORAGE_KEYS } from '../../utils/localStorage';
-import type { Event as AppEvent, CreateEventRequest, UpdateEventRequest } from '../../types/event';
+import { getFromStorage, saveToStorage, STORAGE_KEYS } from '../../utils/localStorage';
+import type { Event as AppEvent, CreateEventRequest } from '../../types/event';
 import type { User } from '../../types/auth';
 import styles from './Events.module.scss';
 import DiceRoller from '../../components/DiceRoller';
+
+const STORAGE_EVENTS_KEY = 'events_storage';
 
 const Events = () => {
   const [events, setEvents] = useState<AppEvent[]>([]);
@@ -12,13 +14,13 @@ const Events = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Состояние для пагинации
+
+  // Пагинация
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
-  
-  // Состояние для модального окна и формы
+
+  // Модальное окно и форма
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentEventId, setCurrentEventId] = useState<string | null>(null);
@@ -26,18 +28,25 @@ const Events = () => {
     title: '',
     description: '',
     date: '',
-    location: ''
   });
 
-  // Обновляю проверку авторизации вначале компонента
   const isAuthenticated = !!user && !!user.id;
 
-  // Выносим функцию обновления пользователя в useCallback
+  // Функции для работы с localStorage
+
+  const loadEventsFromStorage = (): AppEvent[] => {
+    const storedEvents = getFromStorage<AppEvent[]>(STORAGE_EVENTS_KEY);
+    return storedEvents || [];
+  };
+
+  const saveEventsToStorage = (eventsToSave: AppEvent[]) => {
+    saveToStorage(STORAGE_EVENTS_KEY, eventsToSave);
+  };
+
+  // Обновление пользователя из localStorage
   const updateUserState = useCallback(() => {
     try {
-      // Сначала проверяем наличие данных в localStorage
       const rawUserData = localStorage.getItem(STORAGE_KEYS.USER);
-      
       if (rawUserData && rawUserData !== 'undefined') {
         try {
           const userData = JSON.parse(rawUserData) as User;
@@ -59,13 +68,47 @@ const Events = () => {
     }
   }, []);
 
+  // Загрузка событий с сервера и сохранение в localStorage
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Запрос на сервер с текущими параметрами пагинации
+      const eventsData = await getAllEvents(currentPage, itemsPerPage);
+
+      // Обновляем состояние с новыми данными
+      setEvents(eventsData.events);
+
+      // Сохраняем в localStorage для кеша
+      saveEventsToStorage(eventsData.events);
+
+      // Обновляем количество страниц
+      const calculatedTotalPages = Math.ceil(eventsData.totalCount / itemsPerPage) || 1;
+      setTotalPages(calculatedTotalPages);
+    } catch (err) {
+      console.error('Ошибка при загрузке мероприятий:', err);
+      setError('Не удалось загрузить мероприятия');
+
+      // Пытаемся загрузить из localStorage, если есть кеш
+      const cachedEvents = loadEventsFromStorage();
+      if (cachedEvents.length > 0) {
+        setEvents(cachedEvents);
+        setTotalPages(Math.ceil(cachedEvents.length / itemsPerPage) || 1);
+      } else {
+        // Если кеша нет — очищаем состояние
+        setEvents([]);
+        setTotalPages(1);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    // Получаем данные пользователя из localStorage при монтировании компонента
     updateUserState();
-    
     fetchEvents();
 
-    // Обработчик для событий авторизации
     const handleLogin = (e: CustomEvent) => {
       updateUserState();
     };
@@ -91,48 +134,27 @@ const Events = () => {
     };
   }, [updateUserState]);
 
-  // Эффект для пагинации
+  // Обновляем totalPages и currentPage при изменении itemsPerPage или длины events
   useEffect(() => {
-    console.log('=== Pagination Debug ===');
-    console.log('Current itemsPerPage:', itemsPerPage);
-    console.log('Current page:', currentPage);
-    console.log('Total events:', events.length);
-    
+    const newTotalPages = Math.max(1, Math.ceil(events.length / itemsPerPage));
+    setTotalPages(newTotalPages);
+
+    if (currentPage > newTotalPages) {
+      setCurrentPage(1);
+    }
+  }, [itemsPerPage, events.length, currentPage]);
+
+  // Пагинация локально - отображаем только нужные мероприятия
+  useEffect(() => {
     if (events.length > 0) {
       const startIndex = (currentPage - 1) * itemsPerPage;
       const endIndex = startIndex + itemsPerPage;
-      console.log('Start index:', startIndex);
-      console.log('End index:', endIndex);
-      console.log('Slice range:', `${startIndex}:${endIndex}`);
-      
       const newDisplayedEvents = events.slice(startIndex, endIndex);
-      console.log('New displayed events length:', newDisplayedEvents.length);
-      console.log('New displayed events:', newDisplayedEvents);
-      
-      setTotalPages(Math.ceil(events.length / itemsPerPage));
       setDisplayedEvents(newDisplayedEvents);
     } else {
       setDisplayedEvents([]);
-      setTotalPages(1);
     }
   }, [events, currentPage, itemsPerPage]);
-
-  const fetchEvents = async () => {
-    try {
-      setLoading(true);
-      const eventsData = await getAllEvents();
-      console.log('=== Fetched Events Debug ===');
-      console.log('Total events loaded:', eventsData?.length || 0);
-      console.log('Events data:', eventsData);
-      setEvents(eventsData || []);
-      setError(null);
-    } catch (err) {
-      console.error('Ошибка при получении мероприятий:', err);
-      setError('Не удалось загрузить мероприятия');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -141,77 +163,78 @@ const Events = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!newEvent.title || !newEvent.description || !newEvent.date || !newEvent.location) {
+
+    if (!user || !user.id) {
+      setError('Необходимо авторизоваться для создания мероприятия');
+      return;
+    }
+
+    if (!newEvent.title || !newEvent.description || !newEvent.date) {
       setError('Пожалуйста, заполните все обязательные поля');
       return;
     }
-    
+
     try {
       setError(null);
       if (isEditMode && currentEventId) {
-        // Обновляем существующее мероприятие
-        await updateEvent({ 
+        await updateEvent(currentEventId, {
           id: currentEventId,
-          ...newEvent 
+          title: newEvent.title,
+          description: newEvent.description,
+          date: newEvent.date,
         });
       } else {
-        // Создаем новое мероприятие
-        await createEvent(newEvent);
+        await createEvent({
+          title: newEvent.title,
+          description: newEvent.description,
+          date: newEvent.date,
+        });
       }
-      
-      // Сбрасываем форму
-      setNewEvent({
-        title: '',
-        description: '',
-        date: '',
-        location: ''
-      });
-      
-      // Закрываем модальное окно и сбрасываем режим редактирования
+
+      // После успешного обновления/создания обновляем список с сервера
+      await fetchEvents();
+
+      setNewEvent({ title: '', description: '', date: '' });
       setIsModalOpen(false);
       setIsEditMode(false);
       setCurrentEventId(null);
-      
-      // Обновляем список мероприятий
-      fetchEvents();
-    } catch (err) {
-      console.error(`Ошибка при ${isEditMode ? 'обновлении' : 'создании'} мероприятия:`, err);
-      setError(`Не удалось ${isEditMode ? 'обновить' : 'создать'} мероприятие`);
+    } catch (error: any) {
+      console.error(`Ошибка при ${isEditMode ? 'обновлении' : 'создании'} мероприятия:`, error);
+      if (error.response?.status === 401) {
+        setError('Необходимо авторизоваться для выполнения этого действия');
+      } else {
+        setError(error.response?.data?.message || `Не удалось ${isEditMode ? 'обновить' : 'создать'} мероприятие`);
+      }
     }
   };
 
   const handleDelete = async (id: string) => {
+    if (!window.confirm('Вы уверены, что хотите удалить это мероприятие?')) {
+      return;
+    }
     try {
       setError(null);
       await deleteEvent(id);
-      // Обновляем список мероприятий
-      fetchEvents();
+      await fetchEvents();
     } catch (err) {
       console.error('Ошибка при удалении мероприятия:', err);
       setError('Не удалось удалить мероприятие');
     }
   };
 
-  // Обработчик для редактирования мероприятия
   const handleEdit = (event: AppEvent) => {
     setIsEditMode(true);
     setCurrentEventId(event.id);
-    
     try {
-      // Форматируем дату в формат datetime-local
       let formattedDate = '';
       if (event.date) {
         const dateObj = new Date(event.date);
         formattedDate = dateObj.toISOString().slice(0, 16);
       }
-      
       setNewEvent({
         title: event.title || '',
         description: event.description || '',
         date: formattedDate,
-        location: event.location || '',
-        imageUrl: event.imageUrl
       });
     } catch (err) {
       console.error('Ошибка при подготовке данных для редактирования:', err);
@@ -219,15 +242,11 @@ const Events = () => {
         title: event.title || '',
         description: event.description || '',
         date: '',
-        location: event.location || '',
-        imageUrl: event.imageUrl
       });
     }
-    
     openModal();
   };
 
-  // Обработчики для модального окна
   const openModal = () => {
     setIsModalOpen(true);
     setError(null);
@@ -239,31 +258,20 @@ const Events = () => {
       title: '',
       description: '',
       date: '',
-      location: ''
     });
     setIsEditMode(false);
     setCurrentEventId(null);
     setError(null);
   };
 
-  // Функции для пагинации
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
       setCurrentPage(newPage);
     }
   };
 
-  const handleItemsPerPageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    setItemsPerPage(value);
-    setCurrentPage(1); // Сбрасываем страницу на первую при изменении количества элементов
-  };
-
-  // Функция для создания списка номеров страниц
   const renderPaginationButtons = () => {
     const buttons = [];
-    
-    // Добавляем кнопку "Предыдущая"
     buttons.push(
       <button
         key="prev"
@@ -274,17 +282,11 @@ const Events = () => {
         &laquo;
       </button>
     );
-    
-    // Определяем, сколько кнопок показывать (макс. 5)
     let startPage = Math.max(1, currentPage - 2);
     let endPage = Math.min(totalPages, startPage + 4);
-    
-    // Корректируем startPage, если endPage достиг предела
     if (endPage - startPage < 4) {
       startPage = Math.max(1, endPage - 4);
     }
-    
-    // Добавляем кнопки с номерами страниц
     for (let i = startPage; i <= endPage; i++) {
       buttons.push(
         <button
@@ -296,8 +298,6 @@ const Events = () => {
         </button>
       );
     }
-    
-    // Добавляем кнопку "Следующая"
     buttons.push(
       <button
         key="next"
@@ -308,41 +308,27 @@ const Events = () => {
         &raquo;
       </button>
     );
-    
     return buttons;
   };
 
-  // Функция для безопасного форматирования даты
   const formatEventDate = (dateString: string) => {
     try {
       if (!dateString) return "Дата не указана";
-      
-      return new Date(dateString).toLocaleDateString('ru-RU', { 
-        day: 'numeric', 
-        month: 'long', 
+      return new Date(dateString).toLocaleDateString('ru-RU', {
+        day: 'numeric',
+        month: 'long',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
       });
-    } catch (err) {
+    } catch {
       return "Некорректная дата";
     }
   };
 
-  // Проверка, является ли пользователь создателем события
   const isEventCreator = (event: AppEvent) => {
-    return isAuthenticated && user?.id === event.organizerId;
+    return isAuthenticated && String(user?.id) === String(event.createdBy);
   };
-
-  // Добавляем эффект для отслеживания изменений itemsPerPage
-  useEffect(() => {
-    console.log('=== Events ItemsPerPage Changed ===');
-    console.log('New itemsPerPage value:', itemsPerPage);
-  }, [itemsPerPage]);
-
-  if (loading) {
-    return <div className={styles.loading}>Загрузка мероприятий...</div>;
-  }
 
   return (
     <div className={styles.eventsPage}>
@@ -359,9 +345,9 @@ const Events = () => {
           )}
         </div>
       </div>
-      
+
       {error && <div className={styles.error}>{error}</div>}
-      
+
       <div className={styles.eventsList}>
         {displayedEvents.length === 0 ? (
           <p>Мероприятий не найдено</p>
@@ -370,7 +356,7 @@ const Events = () => {
             <div key={event.id} className={styles.eventCard}>
               {isEventCreator(event) && (
                 <div className={styles.eventControls}>
-                  <button 
+                  <button
                     className={styles.editIcon}
                     onClick={() => handleEdit(event)}
                     aria-label="Редактировать"
@@ -380,7 +366,7 @@ const Events = () => {
                       <path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z" />
                     </svg>
                   </button>
-                  <button 
+                  <button
                     className={styles.deleteIcon}
                     onClick={() => handleDelete(event.id)}
                     aria-label="Удалить"
@@ -404,7 +390,6 @@ const Events = () => {
         )}
       </div>
 
-      {/* Элементы пагинации */}
       {events.length > 0 && (
         <div className={styles.pagination}>
           <div className={styles.paginationControls}>
@@ -416,9 +401,6 @@ const Events = () => {
               max={20}
               value={itemsPerPage}
               onRoll={(value) => {
-                console.log('=== Events DiceRoll Handler ===');
-                console.log('New dice value:', value);
-                console.log('Current itemsPerPage before update:', itemsPerPage);
                 setItemsPerPage(value);
                 setCurrentPage(1);
               }}
@@ -431,7 +413,6 @@ const Events = () => {
         </div>
       )}
 
-      {/* Модальное окно для создания/редактирования мероприятия */}
       {isModalOpen && (
         <div className={styles.modalOverlay} onClick={closeModal}>
           <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
@@ -439,7 +420,6 @@ const Events = () => {
             <h2 className={styles.modalTitle}>
               {isEditMode ? 'Редактировать мероприятие' : 'Создать новое мероприятие'}
             </h2>
-            
             <form onSubmit={handleSubmit} className={styles.form}>
               <div className={styles.formGroup}>
                 <label htmlFor="title">Название *</label>
@@ -453,7 +433,6 @@ const Events = () => {
                   required
                 />
               </div>
-              
               <div className={styles.formGroup}>
                 <label htmlFor="description">Описание *</label>
                 <textarea
@@ -465,7 +444,6 @@ const Events = () => {
                   required
                 />
               </div>
-              
               <div className={styles.formGroup}>
                 <label htmlFor="date">Дата проведения *</label>
                 <input
@@ -478,26 +456,12 @@ const Events = () => {
                   required
                 />
               </div>
-              
-              <div className={styles.formGroup}>
-                <label htmlFor="location">Место проведения *</label>
-                <input
-                  type="text"
-                  id="location"
-                  name="location"
-                  value={newEvent.location}
-                  onChange={handleInputChange}
-                  autoComplete="address-level2"
-                  required
-                />
-              </div>
-              
               <div className={styles.formButtons}>
                 <button type="submit" className={styles.submitButton}>
                   {isEditMode ? 'Сохранить' : 'Создать'}
                 </button>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className={styles.cancelButton}
                   onClick={closeModal}
                 >

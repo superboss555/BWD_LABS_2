@@ -7,24 +7,26 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   try {
     const response = await baseApi.post<AuthResponse>('/auth/login', data);
     
-    if (response.data) {
-      // Проверяем валидность ответа сервера
-      if (!response.data.token) {
+    if (response.data && response.data.data) {
+      const { accessToken, user } = response.data.data;
+      
+      if (!accessToken) {
         console.error('Ошибка: токен отсутствует в ответе сервера');
+        throw new Error('Токен отсутствует в ответе сервера');
       }
       
       // Сохраняем данные в localStorage
-      saveToStorage(STORAGE_KEYS.TOKEN, response.data.token);
-      saveToStorage(STORAGE_KEYS.USER, response.data.user);
+      saveToStorage(STORAGE_KEYS.TOKEN, accessToken);
+      saveToStorage(STORAGE_KEYS.USER, user);
       
       // Обновляем состояние авторизации
-      authState.login(response.data.user);
+      authState.login(user);
       
       // Отправляем события для обновления UI
       window.dispatchEvent(new CustomEvent('login'));
       window.dispatchEvent(new StorageEvent('storage', {
         key: STORAGE_KEYS.USER,
-        newValue: JSON.stringify(response.data.user)
+        newValue: JSON.stringify(user)
       }));
     }
     
@@ -39,9 +41,10 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
   try {
     const response = await baseApi.post<AuthResponse>('/auth/register', data);
     
-    if (response.data) {
-      saveToStorage(STORAGE_KEYS.TOKEN, response.data.token);
-      saveToStorage(STORAGE_KEYS.USER, response.data.user);
+    if (response.data && response.data.data) {
+      const { accessToken, user } = response.data.data;
+      saveToStorage(STORAGE_KEYS.TOKEN, accessToken);
+      saveToStorage(STORAGE_KEYS.USER, user);
     }
     
     return response.data;
@@ -73,16 +76,17 @@ export const getCurrentUser = async (): Promise<AuthResponse> => {
   try {
     const response = await baseApi.get<AuthResponse>('/auth/me');
     
-    if (response.data && response.data.user) {
-      saveToStorage(STORAGE_KEYS.USER, response.data.user);
+    if (response.data && response.data.data) {
+      const { user } = response.data.data;
+      saveToStorage(STORAGE_KEYS.USER, user);
       
-      authState.login(response.data.user);
+      authState.login(user);
       
       // Отправляем события для обновления UI
       window.dispatchEvent(new CustomEvent('login'));
       window.dispatchEvent(new StorageEvent('storage', {
         key: STORAGE_KEYS.USER,
-        newValue: JSON.stringify(response.data.user)
+        newValue: JSON.stringify(user)
       }));
     }
     

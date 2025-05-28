@@ -1,13 +1,11 @@
 // Скрипт для пересоздания базы данных
-import { authDB, cleanupDuplicateTables, syncDB, seedDB } from './db.js';
+import { authDB, syncDB, seedDB } from './db.js';
 
 const resetDb = async (): Promise<void> => {
   try {
     console.log('Начинаем пересоздание базы данных...');
 
     await authDB();
-
-    await cleanupDuplicateTables();
 
     await syncDB(true);
 

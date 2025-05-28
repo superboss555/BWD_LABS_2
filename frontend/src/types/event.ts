@@ -3,22 +3,26 @@ export interface Event {
   title: string;
   description: string;
   date: string;
-  location: string;
-  imageUrl?: string;
-  organizerId: string;
-  organizerName?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdBy: number;
+}
+
+export interface EventFormData {
+  title: string;
+  description: string;
+  date: string;
+ 
 }
 
 export interface CreateEventRequest {
   title: string;
   description: string;
   date: string;
-  location: string;
-  imageUrl?: string;
+ 
 }
 
-export interface UpdateEventRequest extends Partial<CreateEventRequest> {
+export interface UpdateEventRequest {
   id: string;
+  title?: string;
+  description?: string;
+  date?: string;
 } 

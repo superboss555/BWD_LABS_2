@@ -9,25 +9,35 @@ const apiKeyAuth = (
   res: Response,
   next: NextFunction,
 ): void => {
-  // Получение API-ключа из заголовков запроса
-  const apiKey = req.headers['x-api-key'] as string;
-
-  // Получение разрешенного ключа из переменных окружения
+  const apiKey = req.headers['x-api-key'] as string | undefined;
   const validApiKey = process.env.API_KEY;
 
-  // Если ключ не предоставлен или неверный
-  if (!apiKey || apiKey !== validApiKey) {
+  console.log('apiKeyAuth middleware called');
+  console.log('Received API key:', apiKey);
+  console.log('Expected API key:', validApiKey);
+
+  if (!apiKey) {
+    console.warn('API key is missing');
     res.status(401).json({
       status: 'error',
-      message: 'Неверный или отсутствующий API-ключ',
+      message: 'Отсутствует API-ключ',
     });
     return;
   }
 
-  // Сохраняем API ключ в запросе
+  if (apiKey !== validApiKey) {
+    console.warn('Invalid API key');
+    res.status(401).json({
+      status: 'error',
+      message: 'Неверный API-ключ',
+    });
+    return;
+  }
+
+  // Сохраняем API ключ в запросе для дальнейшего использования, если нужно
   req.apiKey = apiKey;
 
-  // Если ключ верный, переходим к следующему middleware
+  console.log('API key is valid, proceeding to next middleware');
   next();
 };
 

@@ -1,5 +1,6 @@
 import { Event } from '../models/index.js';
 import { EventInstance, EventCreationAttributes } from '../types/models.js';
+import EventModel from '../models/Event.ts';
 
 interface EventServiceResponse {
   events: EventInstance[];
@@ -33,10 +34,19 @@ class EventService {
     };
   }
 
+  async getUserEvents(userId: number): Promise<EventInstance[]> {
+    const events = await Event.findAll({
+      where: {
+        createdBy: userId,
+      },
+    });
+    return events;
+  }
+
   async getEventById(id: number): Promise<EventInstance> {
     const event = await Event.findByPk(id);
     if (!event) {
-      throw new Error(`Мероприятие с ID ${id} не найдено`);
+      throw new Error('Мероприятие не найдено');
     }
     return event;
   }
@@ -53,39 +63,45 @@ class EventService {
       throw new Error('Необходимо указать создателя мероприятия');
     }
 
-    return await Event.create({ title, description, date, createdBy });
+    return await Event.create({ 
+      title, 
+      description, 
+      date, 
+      createdBy
+    });
   }
 
-  async updateEvent(
-    id: number,
-    eventData: Partial<EventCreationAttributes>,
-  ): Promise<EventUpdateResponse> {
-    const event = await Event.findByPk(id);
-    if (!event) {
-      throw new Error(`Мероприятие с ID ${id} не найдено`);
+  async updateEvent(eventId: number, eventData: Partial<EventInstance>, userId: number): Promise<EventInstance> {
+    console.log(`EventService.updateEvent called with eventId=${eventId}, userId=${userId}`);
+    try {
+      const event = await this.getEventById(eventId);
+      console.log('Found event:', event);
+  
+      if (event.createdBy !== userId) {
+        const errorMsg = 'Нет прав на изменение этого мероприятия';
+        console.log(errorMsg);
+        throw new Error(errorMsg);
+      }
+  
+      await event.update(eventData);
+      console.log('Event updated in DB:', event);
+  
+      return event;
+    } catch (error) {
+      console.error('Error in EventService.updateEvent:', error);
+      throw error;
     }
-
-    const oldEvent = { ...event.toJSON() };
-    const updatedEvent = await event.update(eventData);
-
-    return {
-      current: updatedEvent,
-      previous: oldEvent,
-    };
   }
 
-  async deleteEvent(id: number, userId: number): Promise<boolean> {
+  async deleteEvent(id: number, userId: number): Promise<void> {
     const event = await Event.findByPk(id);
     if (!event) {
-      throw new Error(`Мероприятие с ID ${id} не найдено`);
+      throw new Error('Мероприятие не найдено');
     }
-
     if (event.createdBy !== userId) {
       throw new Error('Нет прав на удаление этого мероприятия');
     }
-
     await event.destroy();
-    return true;
   }
 }
 

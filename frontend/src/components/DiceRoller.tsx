@@ -13,7 +13,7 @@ const getRandomInt = (min: number, max: number) => {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 };
 
-const DiceRoller: React.FC<DiceRollerProps> = ({ min = 1, max = 20, value, onRoll, disabled }) => {
+const DiceRoller: React.FC<DiceRollerProps> = ({ min = 1, max = 10, value, onRoll, disabled }) => {
   const [rolling, setRolling] = useState(false);
   const [displayValue, setDisplayValue] = useState(value);
   const [canRoll, setCanRoll] = useState(true);

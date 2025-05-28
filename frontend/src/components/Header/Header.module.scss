@@ -400,4 +400,30 @@
       bottom: -8px;
     }
   }
+}
+
+.dropdownLink {
+  display: block;
+  padding: 8px 16px;
+  color: #333;
+  text-decoration: none;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
+}
+
+.mobileProfileLink {
+  display: block;
+  padding: 12px 16px;
+  color: #333;
+  text-decoration: none;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background-color: #f5f5f5;
+  }
 } 

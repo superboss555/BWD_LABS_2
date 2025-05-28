@@ -65,7 +65,7 @@ export const seedDB = async (): Promise<{
       {
         name: 'Иван Иванов',
         email: 'ivan@example.com',
-        password: 'password123',
+        password: '123',
       },
       {
         name: 'Мария Петрова',
@@ -115,8 +115,7 @@ export const seedDB = async (): Promise<{
       },
       {
         title: 'Хакатон по разработке мобильных приложений',
-        description:
-          'Трехдневный хакатон для разработчиков мобильных приложений',
+        description: 'Трехдневный хакатон для разработчиков мобильных приложений',
         date: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
         createdBy: users[2].id,
       },
@@ -124,6 +123,7 @@ export const seedDB = async (): Promise<{
         title: 'Вебинар: Основы React',
         description: 'Вводный вебинар по библиотеке React',
         date: new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000),
+            
         createdBy: users[0].id,
       },
       {
@@ -142,38 +142,42 @@ export const seedDB = async (): Promise<{
         title: 'Мастер-класс по Docker',
         description: 'Практическое введение в Docker и контейнеризацию',
         date: new Date(now.getTime() + 12 * 24 * 60 * 60 * 1000),
+        
         createdBy: users[4].id,
       },
       {
         title: 'Лекция по кибербезопасности',
         description: 'Современные угрозы и методы защиты веб-приложений',
         date: new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000),
+        
         createdBy: users[1].id,
       },
       {
         title: 'Воркшоп по дизайну интерфейсов',
-        description:
-          'Практические приемы создания удобных пользовательских интерфейсов',
+        description: 'Практические приемы создания удобных пользовательских интерфейсов',
         date: new Date(now.getTime() + 9 * 24 * 60 * 60 * 1000),
+       
         createdBy: users[3].id,
       },
       {
         title: 'Конференция по искусственному интеллекту',
         description: 'Последние достижения в области ИИ и машинного обучения',
         date: new Date(now.getTime() + 21 * 24 * 60 * 60 * 1000),
+       
         createdBy: users[4].id,
       },
       {
         title: 'Митап по TypeScript',
-        description:
-          'Обмен опытом и лучшими практиками при работе с TypeScript',
+        description: 'Обмен опытом и лучшими практиками при работе с TypeScript',
         date: new Date(now.getTime() + 15 * 24 * 60 * 60 * 1000),
+        
         createdBy: users[2].id,
       },
       {
         title: 'Курс по GraphQL',
         description: 'Введение в GraphQL и его использование с React и Node.js',
         date: new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000),
+       
         createdBy: users[0].id,
       },
     ]);

@@ -15,7 +15,14 @@ export interface User {
   name: string;
 }
 
-export interface AuthResponse {
-  token: string;
+export interface AuthResponseData {
+  accessToken: string;
+  refreshToken: string;
   user: User;
+}
+
+export interface AuthResponse {
+  status: string;
+  message: string;
+  data: AuthResponseData;
 } 
