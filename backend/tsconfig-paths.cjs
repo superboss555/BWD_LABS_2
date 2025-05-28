@@ -1,5 +1,4 @@
 const tsConfigPaths = require('tsconfig-paths');
-const { resolve } = require('path');
 
 // Регистрация алиасов для NodeJS без чтения из tsconfig.json
 tsConfigPaths.register({
@@ -12,6 +11,6 @@ tsConfigPaths.register({
     '@routes/*': ['routes/*'],
     '@middlewares/*': ['middlewares/*'],
     '@configs/*': ['configs/*'],
-    '@types/*': ['types/*']
-  }
-}); 
+    '@types/*': ['types/*'],
+  },
+});

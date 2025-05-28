@@ -24,33 +24,8 @@ export const authDB = async (): Promise<void> => {
   }
 };
 
-export const cleanupDuplicateTables = async (): Promise<void> => {
-  try {
-    console.debug('Проверяю наличие таблиц...');
-
-    console.debug('Удаляю таблицу events (если существует)...');
-    await sequelize.query('DROP TABLE IF EXISTS events CASCADE');
-
-    console.debug('Удаляю таблицу event (если существует)...');
-    await sequelize.query('DROP TABLE IF EXISTS event CASCADE');
-
-    console.debug('Удаляю таблицу users (если существует)...');
-    await sequelize.query('DROP TABLE IF EXISTS users CASCADE');
-
-    console.debug('Удаляю таблицу user (если существует)...');
-    await sequelize.query('DROP TABLE IF EXISTS "user" CASCADE');
-
-    console.debug('Таблицы успешно удалены');
-  } catch (error) {
-    console.error(`Ошибка при удалении таблиц: ${error}`);
-    throw error;
-  }
-};
-
 export const syncDB = async (shouldForce = false): Promise<void> => {
   try {
-    await cleanupDuplicateTables();
-
     await import('../models/index.js');
 
     await sequelize.sync({ force: shouldForce });
