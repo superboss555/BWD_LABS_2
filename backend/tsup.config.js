@@ -21,18 +21,20 @@ export default defineConfig({
       '@routes': resolve(__dirname, 'src/routes'),
       '@middlewares': resolve(__dirname, 'src/middlewares'),
       '@configs': resolve(__dirname, 'src/configs'),
-      '@types': resolve(__dirname, 'src/types')
+      '@types': resolve(__dirname, 'src/types'),
     };
   },
   // Включаем обработку расширения .js в импортах
-  esbuildPlugins: [{
-    name: 'fix-js-imports',
-    setup(build) {
-      // Перехватываем и обрабатываем импорты с расширением .js
-      build.onResolve({ filter: /\.js$/ }, args => {
-        if (args.kind !== 'import-statement') return null;
-        return { path: args.path.replace('.js', ''), external: false };
-      });
-    }
-  }]
-}); 
+  esbuildPlugins: [
+    {
+      name: 'fix-js-imports',
+      setup(build) {
+        // Перехватываем и обрабатываем импорты с расширением .js
+        build.onResolve({ filter: /\.js$/ }, (args) => {
+          if (args.kind !== 'import-statement') return null;
+          return { path: args.path.replace('.js', ''), external: false };
+        });
+      },
+    },
+  ],
+});

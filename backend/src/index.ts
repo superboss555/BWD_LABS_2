@@ -45,7 +45,7 @@ app.use(
 );
 app.use('/', baseRouter);
 
-const RESET_DATABASE = process.env.RESET_DATABASE === 'true' || false;
+const RESET_DATABASE = process.env.RESET_DATABASE === 'true' ? true : false;
 
 async function startServer(): Promise<void> {
   try {
@@ -64,7 +64,7 @@ async function startServer(): Promise<void> {
       );
       await resetAndSeedDB();
     } else {
-      await syncDB();
+      await syncDB(false);
       await seedDB();
     }
 
@@ -78,5 +78,4 @@ async function startServer(): Promise<void> {
 }
 
 startServer();
-  //husky
-  
+
