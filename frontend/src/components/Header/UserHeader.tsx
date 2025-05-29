@@ -129,6 +129,13 @@ const UserHeader = () => {
               </button>
               {dropdownOpen && (
                 <div className={styles.dropdownMenu}>
+                  <NavLink
+                    to="/profile"
+                    className={styles.dropdownLink}
+                    onClick={() => setDropdownOpen(false)}
+                  >
+                    Мой профиль
+                  </NavLink>
                   <button
                     onClick={handleLogout}
                     className={styles.logoutButton}
@@ -188,6 +195,13 @@ const UserHeader = () => {
       <div className={`${styles.mobileAuthMenu} ${mobileAuthMenuOpen ? styles.open : ''}`}>
         <div className={styles.userInfo}>
           <p>{userName}</p>
+          <NavLink
+            to="/profile"
+            className={styles.mobileProfileLink}
+            onClick={() => setMobileAuthMenuOpen(false)}
+          >
+            Мой профиль
+          </NavLink>
           <button
             onClick={handleLogout}
             className={styles.logoutButton}

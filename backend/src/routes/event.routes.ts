@@ -1,7 +1,37 @@
 import { Router } from 'express';
-import EventController from '../controllers/EventController.js';
+import passport from '../configs/passport.js';
+import EventController from '../controllers/EventController.ts';
+import eventParticipantRoutes from './EventParticipant.routes.ts'; // импорт маршрутов участников
+import { Request, Response, NextFunction } from 'express';
 
 const eventRouter = Router();
+
+const logRequestInfo = (req: Request & { user?: any }, res: Response, next: NextFunction) => {
+  console.log(`\n--- ${req.method} ${req.originalUrl} ---`);
+  console.log('Headers:', req.headers);
+  console.log('Body:', req.body);
+  console.log('User:', req.user);
+  next();
+};
+
+/**
+ * @swagger
+ * /events/user:
+ *   get:
+ *     summary: Получить мероприятия пользователя
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Список мероприятий пользователя
+ *       401:
+ *         description: Необходима авторизация
+ */
+eventRouter.get(
+  '/user',
+
+  EventController.getUserEvents,
+);
 
 /**
  * @swagger
@@ -28,6 +58,8 @@ eventRouter.get('/:id', EventController.getOne);
  * /events:
  *   post:
  *     summary: Создать новое мероприятие
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -35,18 +67,26 @@ eventRouter.get('/:id', EventController.getOne);
  *           schema:
  *             $ref: '#/components/schemas/Event'
  *     responses:
- *       200:
+ *       201:
  *         description: Мероприятие создано
  *       400:
  *         description: Неверные данные
+ *       401:
+ *         description: Необходима авторизация
  */
-eventRouter.post('/', EventController.create);
+eventRouter.post(
+  '/',
+
+  EventController.create,
+);
 
 /**
  * @swagger
  * /events/{id}:
  *   put:
  *     summary: Обновить мероприятие
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -62,16 +102,24 @@ eventRouter.post('/', EventController.create);
  *     responses:
  *       200:
  *         description: Мероприятие обновлено
+ *       401:
+ *         description: Необходима авторизация
  *       404:
  *         description: Мероприятие не найдено
  */
-eventRouter.put('/:id', EventController.update);
+eventRouter.put(
+  '/:id',
+  logRequestInfo,
+  EventController.update,
+);
 
 /**
  * @swagger
  * /events/{id}:
  *   delete:
  *     summary: Удалить мероприятие
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -81,9 +129,14 @@ eventRouter.put('/:id', EventController.update);
  *     responses:
  *       200:
  *         description: Мероприятие удалено
+ *       401:
+ *         description: Необходима авторизация
  *       404:
  *         description: Мероприятие не найдено
  */
 eventRouter.delete('/:id', EventController.delete);
+
+// Подключаем маршруты участников
+eventRouter.use('/', eventParticipantRoutes);
 
 export default eventRouter;

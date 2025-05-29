@@ -1,31 +1,32 @@
-import { Response, NextFunction } from 'express';
-import passport from '../configs/passport.js';
-import { AuthRequest } from '../types/express.js';
+import type { Request, Response, NextFunction } from 'express';
+import passport from 'passport';
+import type { AuthRequest } from '../types/express.js';
 
 export const isAuthenticated = (
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction,
 ): void => {
-  passport.authenticate('jwt', { session: false }, (err: Error, user: any) => {
-    if (err) {
-      res.status(500).json({
-        status: 'error',
-        message: 'Ошибка аутентификации',
-        error: err.message,
-      });
-      return;
-    }
+  console.log('--- isAuthenticated middleware start ---');
+  console.log('Authorization header:', req.headers.authorization);
 
-    if (!user) {
-      res.status(401).json({
-        status: 'error',
-        message: 'Вы не авторизованы',
-      });
-      return;
-    }
-
-    req.user = user;
-    next();
-  })(req, res, next);
+  passport.authenticate(
+    'jwt',
+    { session: false },
+    (err: Error | null, user: any, info: any) => {
+      if (err) {
+        console.error('Auth error:', err);
+        return res.status(500).json({ message: 'Auth error' });
+      }
+      if (!user) {
+        console.warn('Unauthorized: user not found or invalid token');
+        console.warn('Authentication info:', info);
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      console.log('User authenticated:', user.email || user.id || user);
+      (req as AuthRequest).user = user;
+      console.log('--- isAuthenticated middleware end ---');
+      next();
+    },
+  )(req, res, next);
 };

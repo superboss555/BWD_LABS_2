@@ -1,9 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { getFromStorage, STORAGE_KEYS } from '../../utils/localStorage';
 import type { User } from '../../types/auth';
 import authState from '../../context/AuthState';
 
-export const AuthInitializer = () => {
+interface AuthInitializerProps {
+  children: ReactNode;
+}
+
+const AuthInitializer = ({ children }: AuthInitializerProps) => {
   useEffect(() => {
     const initAuth = () => {
       const userData = getFromStorage<User>(STORAGE_KEYS.USER);
@@ -16,5 +20,7 @@ export const AuthInitializer = () => {
     initAuth();
   }, []);
 
-  return null;
-}; 
+  return <>{children}</>;
+};
+
+export default AuthInitializer; 

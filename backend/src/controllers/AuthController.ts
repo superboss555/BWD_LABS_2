@@ -6,7 +6,7 @@ import { UserInstance, RefreshTokenInstance } from '../types/models.js';
 import { AuthRequest } from '../types/express.js';
 
 // Использовать значение из .env или использовать запасной ключ
-const JWT_SECRET = process.env.JWT_SECRET || 'test_jwt_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET || 'secret';
 // Время жизни токенов
 const ACCESS_TOKEN_EXPIRY = '15m'; // 15 минут
 

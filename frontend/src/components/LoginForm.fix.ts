@@ -1,37 +1,23 @@
-import { useEffect } from 'react';
-import { getFromStorage, STORAGE_KEYS } from '../utils/localStorage';
-import { useAuth } from '../context/AuthContext';
+import { useState, useEffect } from 'react';
+import authState from '../context/AuthState';
 import type { User } from '../types/auth';
 
-export const useAuthFix = () => {
-  const { setUser } = useAuth();
+export const useAuth = () => {
+  const [user, setUser] = useState<User | null>(authState.userData);
+  const [isAuthenticated, setIsAuthenticated] = useState(authState.isAuthenticated);
 
   useEffect(() => {
-    const checkAuth = () => {
-      try {
-        const userData = getFromStorage<User>(STORAGE_KEYS.USER);
-        if (userData) {
-          setUser(userData);
-        }
-      } catch (error) {
-        console.error('Error checking auth:', error);
-      }
+    const handleAuthChange = (event: CustomEvent<boolean>) => {
+      setIsAuthenticated(event.detail);
+      setUser(authState.userData);
     };
 
-    checkAuth();
-
-    window.addEventListener('storage', (e) => {
-      if (e.key === STORAGE_KEYS.USER && e.newValue) {
-        checkAuth();
-      }
-    });
+    window.addEventListener('auth_state_changed', handleAuthChange as EventListener);
 
     return () => {
-      window.removeEventListener('storage', (e) => {
-        if (e.key === STORAGE_KEYS.USER) {
-          checkAuth();
-        }
-      });
+      window.removeEventListener('auth_state_changed', handleAuthChange as EventListener);
     };
-  }, [setUser]);
-}; 
+  }, []);
+
+  return { user, isAuthenticated };
+};
