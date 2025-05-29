@@ -26,3 +26,18 @@ export interface UpdateEventRequest {
   description?: string;
   date?: string;
 } 
+
+
+export interface UserInfo {
+  name: string;
+  email: string;
+}
+
+export interface Participant {
+  id: number;
+  eventId: number;
+  userId: number;
+  createdAt: string;
+  updatedAt: string;
+  User?: UserInfo;
+}

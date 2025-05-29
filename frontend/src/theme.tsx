@@ -8,6 +8,12 @@ export const theme = createTheme({
     secondary: {
       main: '#dc004e',
     },
+    background: {
+      paper: '#fff',
+    },
+    text: {
+      primary: '#000',
+    },
   },
   typography: {
     fontFamily: [
@@ -28,5 +34,13 @@ export const theme = createTheme({
         },
       },
     },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundColor: '#fff',
+          color: '#000',
+        },
+      },
+    },
   },
-}); 
+});

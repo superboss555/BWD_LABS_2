@@ -62,6 +62,7 @@ export const logout = (): void => {
     authState.logout();
     
     // Отправляем события для обновления UI
+    window.dispatchEvent(new CustomEvent('auth_state_changed', { detail: false }));
     window.dispatchEvent(new CustomEvent('logout'));
     window.dispatchEvent(new StorageEvent('storage', {
       key: STORAGE_KEYS.USER,
@@ -83,6 +84,7 @@ export const getCurrentUser = async (): Promise<AuthResponse> => {
       authState.login(user);
       
       // Отправляем события для обновления UI
+      window.dispatchEvent(new CustomEvent('auth_state_changed', { detail: true }));
       window.dispatchEvent(new CustomEvent('login'));
       window.dispatchEvent(new StorageEvent('storage', {
         key: STORAGE_KEYS.USER,

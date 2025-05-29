@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import passport from '../configs/passport.js';
-import EventController from '../controllers/EventController.js';
+import EventController from '../controllers/EventController.ts';
+import eventParticipantRoutes from './EventParticipant.routes.ts'; // импорт маршрутов участников
 import { Request, Response, NextFunction } from 'express';
 
 const eventRouter = Router();
+
 const logRequestInfo = (req: Request & { user?: any }, res: Response, next: NextFunction) => {
   console.log(`\n--- ${req.method} ${req.originalUrl} ---`);
   console.log('Headers:', req.headers);
@@ -27,7 +29,7 @@ const logRequestInfo = (req: Request & { user?: any }, res: Response, next: Next
  */
 eventRouter.get(
   '/user',
-  passport.authenticate('jwt', { session: false }),
+
   EventController.getUserEvents,
 );
 
@@ -74,7 +76,7 @@ eventRouter.get('/:id', EventController.getOne);
  */
 eventRouter.post(
   '/',
-  passport.authenticate('jwt', { session: false }),
+
   EventController.create,
 );
 
@@ -107,11 +109,9 @@ eventRouter.post(
  */
 eventRouter.put(
   '/:id',
-  /* passport.authenticate('jwt', { session: false }), */
   logRequestInfo,
   EventController.update,
 );
-
 
 /**
  * @swagger
@@ -134,9 +134,9 @@ eventRouter.put(
  *       404:
  *         description: Мероприятие не найдено
  */
-eventRouter.delete(
-  '/:id',
-  EventController.delete,
-);
+eventRouter.delete('/:id', EventController.delete);
+
+// Подключаем маршруты участников
+eventRouter.use('/', eventParticipantRoutes);
 
 export default eventRouter;
